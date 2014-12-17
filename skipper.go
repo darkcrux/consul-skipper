@@ -88,7 +88,7 @@ func (c *Candidate) Resign() {
 		if !success || err != nil {
 			logrus.Warnf("%s was unable to step down as a leader", c.node)
 		} else {
-			logrus.Infof("%s is no longer the leader.", c.node)
+			logrus.Debugf("%s is no longer the leader.", c.node)
 		}
 	}
 }
@@ -100,30 +100,34 @@ func (c *Candidate) campaign() {
 	c.retrieveSession()
 	consul := c.consulClient()
 
-	logrus.Infof("%s is running for election with session %s.", c.node, c.session)
+	logrus.Debugf("%s is running for election with session %s.", c.node, c.session)
 
 	kvpair := &consulapi.KVPair{
 		Key:     c.LeadershipKey,
 		Value:   []byte(c.node),
 		Session: c.session,
 	}
-	_, _, err := consul.KV().Acquire(kvpair, nil)
+	acquired, _, err := consul.KV().Acquire(kvpair, nil)
 	if err != nil {
 		logrus.Errorln("Failed to run Consul KV Acquire:", err)
+	}
+
+	if acquired {
+		logrus.Infof("%s has become the leader.", c.node)
 	}
 
 	kv, _, _ := consul.KV().Get(c.LeadershipKey, nil)
 
 	if kv != nil && kv.Session != "" {
-		logrus.Infof("%s is the current leader.", string(kv.Value))
-		logrus.Infof("%s is waiting for changes in '%s'.", c.node, c.LeadershipKey)
+		logrus.Debugf("%s is the current leader.", string(kv.Value))
+		logrus.Debugf("%s is waiting for changes in '%s'.", c.node, c.LeadershipKey)
 		latestIndex := kv.ModifyIndex
 		options := &consulapi.QueryOptions{
 			WaitIndex: latestIndex,
 		}
 		consul.KV().Get(c.LeadershipKey, options)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(15 * time.Second)
 	c.campaign()
 }
 
@@ -154,8 +158,7 @@ func (c *Candidate) retrieveSession() {
 	}
 
 	newSession := &consulapi.SessionEntry{
-		Name:      c.LeadershipKey,
-		LockDelay: 1 * time.Second,
+		Name: c.LeadershipKey,
 	}
 	if sessionId, _, err := consul.Session().Create(newSession, nil); err != nil {
 		logrus.Errorln("Unable to create new sessions:", err)
