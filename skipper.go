@@ -85,7 +85,7 @@ func (c *Candidate) Resign() {
 			Session: c.session,
 		}
 		success, _, err := consul.KV().Release(kvpair, nil)
-		if !sucess || err != nil {
+		if !success || err != nil {
 			logrus.Warnf("%s was unable to step down as a leader", c.node)
 		} else {
 			logrus.Infof("%s is no longer the leader.", c.node)
