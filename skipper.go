@@ -137,6 +137,7 @@ func (c *Candidate) retrieveNode() {
 	agent, err := consul.Agent().Self()
 	if err != nil {
 		logrus.Warnln("Unable to retrieve node name.")
+		return
 	}
 	c.node = agent["Config"]["NodeName"].(string)
 }
