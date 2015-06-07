@@ -8,6 +8,7 @@ and then it runs leader election from there.
 			ConsulAddress:    "10.0.0.10:8500",
 			ConsulDatacenter: "dc1",
 			LeadershipKey:    "app/leader",
+			ConsulAclToken:   "",               // Optional
 		}
 		candidate.RunForElection()
 
@@ -27,11 +28,12 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/armon/consul-api"
+	consulapi "github.com/hashicorp/consul/api"
 )
 
 type Candidate struct {
 	ConsulAddress    string // The address of the consul agent. This defaults to 127.0.0.1:8500.
+	ConsulAclToken   string // The ACL Token to use.  This defaults to an empty string."
 	ConsulDatacenter string // The datacenter to connect to. This defaults to the config used by the agent.
 	LeadershipKey    string // The leadership key. This needs to be a proper Consul KV key. eg. app/leader
 	session          string
@@ -176,6 +178,9 @@ func (c *Candidate) consulClient() *consulapi.Client {
 	}
 	if c.ConsulDatacenter != "" {
 		config.Datacenter = c.ConsulDatacenter
+	}
+	if c.ConsulAclToken != "" {
+		config.Token = c.ConsulAclToken
 	}
 	client, _ := consulapi.NewClient(config)
 	return client
